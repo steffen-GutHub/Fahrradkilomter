@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚴 Fahrrad-Logbücher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0e0f11;
+    --surface:  #161719;
+    --border:   #252729;
+    --text:     #e8e9eb;
+    --muted:    #6b6e75;
+    --green:    #22c97a;
+    --amber:    #f5a623;
+    --red:      #e84040;
+    --mtb:      #e07b39;
+    --green-bg: rgba(34,201,122,.1);
+    --amber-bg: rgba(245,166,35,.1);
+    --red-bg:   rgba(232,64,64,.1);
+    --mtb-bg:   rgba(224,123,57,.1);
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+  }
+  .page-title { text-align: center; margin-bottom: -1.5rem; }
+  .page-title h1 { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+
+  .tracker { width: 100%; max-width: 580px; }
+
+  .divider { width: 100%; max-width: 580px; display: flex; align-items: center; gap: 1rem; }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+
+  header { display: flex; align-items: center; gap: .8rem; margin-bottom: 1.75rem; }
+  .logo-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-icon.rennrad { background: var(--green-bg); border: 1px solid rgba(34,201,122,.4); }
+  .logo-icon.mtb     { background: var(--mtb-bg);   border: 1px solid rgba(224,123,57,.4); }
+  .logo-text h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+  .logo-text .sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: .9rem; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat-value { font-family: var(--mono); font-size: 22px; font-weight: 500; line-height: 1; }
+  .stat-value.warn   { color: var(--amber); }
+  .stat-value.danger { color: var(--red); }
+
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .progress-track { background: var(--surface); border-radius: 99px; height: 8px; position: relative; }
+  .progress-bar { height: 100%; border-radius: 99px; transition: width .5s cubic-bezier(.4,0,.2,1), background .3s; position: relative; }
+  .progress-bar::after { content:''; position:absolute; right:-1px; top:-2px; width:12px; height:12px; border-radius:50%; background:inherit; box-shadow:0 0 8px currentColor; }
+  .progress-marks { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+  .alert { display:none; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:1.5rem; border-left:3px solid; }
+  .alert.warn   { background:var(--amber-bg); border-color:var(--amber); color:var(--amber); }
+  .alert.danger { background:var(--red-bg);   border-color:var(--red);   color:var(--red); }
+
+  .input-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.25rem; margin-bottom:1.5rem; }
+  .input-card h3 { font-size:11px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:1rem; }
+  .input-row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+  .field { display:flex; flex-direction:column; gap:5px; flex:1; min-width:80px; }
+  .field label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  input[type="number"], input[type="date"], input[type="text"] {
+    background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-family:var(--sans); font-size:14px;
+    padding:9px 12px; width:100%; outline:none; transition:border-color .15s; color-scheme:dark;
+  }
+  .tracker.rennrad input:focus { border-color: var(--green); }
+  .tracker.mtb     input:focus { border-color: var(--mtb); }
+  .field-note { flex:2; min-width:140px; }
+
+  .btn { border:none; border-radius:8px; font-family:var(--sans); font-size:14px; font-weight:600; padding:9px 20px; cursor:pointer; white-space:nowrap; transition:opacity .15s, transform .1s; color:#000; }
+  .btn:hover { opacity:.88; } .btn:active { transform:scale(.97); }
+  .btn-rennrad { background: var(--green); }
+  .btn-mtb     { background: var(--mtb); }
+
+  .history-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+  .history-header h3 { font-size:11px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+
+  .wax-btn { background:transparent; border-radius:8px; font-family:var(--sans); font-size:12px; font-weight:500; padding:6px 14px; cursor:pointer; transition:all .15s; }
+  .wax-btn.rennrad { color:var(--green); border:1px solid rgba(34,201,122,.3); }
+  .wax-btn.rennrad:hover { background:var(--green-bg); border-color:var(--green); }
+  .wax-btn.mtb     { color:var(--mtb);   border:1px solid rgba(224,123,57,.3); }
+  .wax-btn.mtb:hover { background:var(--mtb-bg); border-color:var(--mtb); }
+
+  .ride-list { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; padding-right:2px; }
+  .ride-list::-webkit-scrollbar { width:3px; }
+  .ride-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+  .ride-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; animation:slideIn .2s ease; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+  .ride-date { font-size:12px; color:var(--muted); font-family:var(--mono); min-width:75px; }
+  .ride-note { font-size:12px; color:var(--muted); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:italic; }
+  .ride-km   { font-family:var(--mono); font-size:15px; font-weight:500; margin-left:auto; }
+  .ride-km.rennrad { color: var(--green); }
+  .ride-km.mtb     { color: var(--mtb); }
+  .ride-delete { background:none; border:none; cursor:pointer; color:var(--border); font-size:18px; line-height:1; padding:2px 4px; border-radius:4px; transition:color .15s; }
+  .ride-delete:hover { color:var(--red); }
+  .empty-state { text-align:center; padding:2rem; color:var(--muted); font-size:13px; }
+
+  .wax-section { margin-top:1.5rem; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.25rem; }
+  .wax-section h3 { font-size:11px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:1rem; }
+  .wax-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .wax-item:last-child { border-bottom:none; }
+  .wax-date { font-family:var(--mono); color:var(--muted); }
+  .wax-km   { font-family:var(--mono); font-weight:500; }
+
+  .footer { margin-top:1.5rem; display:flex; gap:8px; justify-content:flex-end; }
+  .btn-export { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:8px; font-family:var(--sans); font-size:12px; padding:6px 14px; cursor:pointer; transition:border-color .15s, color .15s; }
+  .btn-export:hover { border-color:var(--muted); color:var(--text); }
+</style>
+</head>
+<body>
+
+<div class="page-title"><h1>Fahrrad-Logbücher 2026</h1></div>
+
+<!-- RENNRAD -->
+<div class="tracker rennrad">
+  <header>
+    <div class="logo-icon rennrad">🚴</div>
+    <div class="logo-text"><h2>Rennrad-Logbuch</h2><div class="sub">Kettenwachs-Intervall: alle 200–300 km</div></div>
+  </header>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Seit Wachsung</div><div class="stat-value" id="rr-total">0 km</div></div>
+    <div class="stat"><div class="stat-label">Noch bis Wachsung</div><div class="stat-value" id="rr-remaining">200 km</div></div>
+    <div class="stat"><div class="stat-label">Fahrten</div><div class="stat-value" id="rr-count">0</div></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-meta"><span>Fortschritt zur Wachsung</span><span id="rr-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-bar" id="rr-bar" style="width:0%;background:var(--green)"></div></div>
+    <div class="progress-marks"><span>0 km</span><span>200 km ⚠</span><span>300 km 🔴</span></div>
+  </div>
+  <div class="alert" id="rr-alert"></div>
+  <div class="input-card">
+    <h3>Fahrt eintragen</h3>
+    <div class="input-row">
+      <div class="field"><label>km</label><input type="number" id="rr-km" min="1" max="999" placeholder="45"></div>
+      <div class="field"><label>Datum</label><input type="date" id="rr-date"></div>
+      <div class="field field-note"><label>Notiz</label><input type="text" id="rr-note" placeholder="z.B. Runde Schwäbische Alb"></div>
+      <button class="btn btn-rennrad" onclick="addRide('rr')">+ Speichern</button>
+    </div>
+  </div>
+  <div class="history-header">
+    <h3>Fahrtenhistorie</h3>
+    <button class="wax-btn rennrad" onclick="doWax('rr')">✓ Kette gewachst — Periode abschließen</button>
+  </div>
+  <div class="ride-list" id="rr-list"></div>
+  <div class="empty-state" id="rr-empty">Noch keine Fahrten — leg los! 🚴</div>
+  <div class="wax-section" id="rr-wax-section" style="display:none"><h3>Wachsungs-Historie</h3><div id="rr-wax-list"></div></div>
+  <div class="footer"><button class="btn-export" onclick="exportCSV('rr')">↓ CSV exportieren</button></div>
+</div>
+
+<!-- DIVIDER -->
+<div class="divider">
+  <div class="divider-line"></div>
+  <div class="divider-label">⬇ Mountainbike</div>
+  <div class="divider-line"></div>
+</div>
+
+<!-- MTB -->
+<div class="tracker mtb">
+  <header>
+    <div class="logo-icon mtb">🚵</div>
+    <div class="logo-text"><h2>Mountainbike-Logbuch</h2><div class="sub">Kettenwachs-Intervall: alle 200–300 km</div></div>
+  </header>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Seit Wachsung</div><div class="stat-value" id="mtb-total">0 km</div></div>
+    <div class="stat"><div class="stat-label">Noch bis Wachsung</div><div class="stat-value" id="mtb-remaining">200 km</div></div>
+    <div class="stat"><div class="stat-label">Fahrten</div><div class="stat-value" id="mtb-count">0</div></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-meta"><span>Fortschritt zur Wachsung</span><span id="mtb-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-bar" id="mtb-bar" style="width:0%;background:var(--mtb)"></div></div>
+    <div class="progress-marks"><span>0 km</span><span>200 km ⚠</span><span>300 km 🔴</span></div>
+  </div>
+  <div class="alert" id="mtb-alert"></div>
+  <div class="input-card">
+    <h3>Fahrt eintragen</h3>
+    <div class="input-row">
+      <div class="field"><label>km</label><input type="number" id="mtb-km" min="1" max="999" placeholder="25"></div>
+      <div class="field"><label>Datum</label><input type="date" id="mtb-date"></div>
+      <div class="field field-note"><label>Notiz</label><input type="text" id="mtb-note" placeholder="z.B. Singletrail Heuberg"></div>
+      <button class="btn btn-mtb" onclick="addRide('mtb')">+ Speichern</button>
+    </div>
+  </div>
+  <div class="history-header">
+    <h3>Fahrtenhistorie</h3>
+    <button class="wax-btn mtb" onclick="doWax('mtb')">✓ Kette gewachst — Periode abschließen</button>
+  </div>
+  <div class="ride-list" id="mtb-list"></div>
+  <div class="empty-state" id="mtb-empty">Noch keine Fahrten — leg los! 🚵</div>
+  <div class="wax-section" id="mtb-wax-section" style="display:none"><h3>Wachsungs-Historie</h3><div id="mtb-wax-list"></div></div>
+  <div class="footer"><button class="btn-export" onclick="exportCSV('mtb')">↓ CSV exportieren</button></div>
+</div>
+
+<script>
+const WAX_WARN = 200, WAX_MAX = 300;
+const cfg = {
+  rr:  { key:'kw_rennrad', accent:'var(--green)', label:'Rennrad' },
+  mtb: { key:'kw_mtb',     accent:'var(--mtb)',   label:'Mountainbike' }
+};
+let state = { rr:{rides:[],waxHistory:[]}, mtb:{rides:[],waxHistory:[]} };
+
+function load() {
+  ['rr','mtb'].forEach(id => {
+    try { const s=localStorage.getItem(cfg[id].key); if(s) state[id]=JSON.parse(s); } catch(e){}
+  });
+  render('rr'); render('mtb');
+}
+function save(id) { localStorage.setItem(cfg[id].key, JSON.stringify(state[id])); }
+function fmtDate(d) { const [y,m,day]=d.split('-'); return `${day}.${m}.${y}`; }
+
+function addRide(id) {
+  const km = parseFloat(document.getElementById(id+'-km').value);
+  if (!km||km<=0) { document.getElementById(id+'-km').focus(); return; }
+  const date = document.getElementById(id+'-date').value || new Date().toISOString().split('T')[0];
+  const note = document.getElementById(id+'-note').value.trim();
+  state[id].rides.unshift({km,date,note,rid:Date.now()});
+  document.getElementById(id+'-km').value='';
+  document.getElementById(id+'-note').value='';
+  save(id); render(id);
+}
+
+function removeRide(id,rid) {
+  if(!confirm('Eintrag löschen?')) return;
+  state[id].rides=state[id].rides.filter(r=>r.rid!==rid);
+  save(id); render(id);
+}
+
+function doWax(id) {
+  const total=Math.round(state[id].rides.reduce((s,r)=>s+r.km,0));
+  if(!confirm(`${cfg[id].label}: Kette gewachst bei ${total} km?\nAktuelle Periode wird archiviert.`)) return;
+  state[id].waxHistory.unshift({date:new Date().toISOString().split('T')[0],km:total});
+  state[id].rides=[];
+  save(id); render(id);
+}
+
+function exportCSV(id) {
+  const rows=[['Datum','Kilometer','Notiz']];
+  state[id].rides.forEach(r=>rows.push([fmtDate(r.date),r.km,r.note||'']));
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${cfg[id].label.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+}
+
+function render(id) {
+  const s=state[id];
+  const total=Math.round(s.rides.reduce((a,r)=>a+r.km,0));
+  const pct=Math.min((total/WAX_MAX)*100,100);
+  const rem=Math.max(WAX_WARN-total,0);
+
+  document.getElementById(id+'-total').textContent=total+' km';
+  const remEl=document.getElementById(id+'-remaining');
+  remEl.textContent=rem>0?rem+' km':'fällig!';
+  remEl.className='stat-value'+(total>=WAX_MAX?' danger':total>=WAX_WARN?' warn':'');
+  document.getElementById(id+'-count').textContent=s.rides.length;
+  document.getElementById(id+'-pct').textContent=Math.round(pct)+'%';
+
+  const bar=document.getElementById(id+'-bar');
+  bar.style.width=pct+'%';
+  bar.style.background=total>=WAX_MAX?'var(--red)':total>=WAX_WARN?'var(--amber)':cfg[id].accent;
+
+  const alert=document.getElementById(id+'-alert');
+  if(total>=WAX_MAX){alert.style.display='block';alert.className='alert danger';alert.textContent='🔴 Kette muss dringend gewachst werden! ('+total+' km)';}
+  else if(total>=WAX_WARN){alert.style.display='block';alert.className='alert warn';alert.textContent='⚠️  Kettenwachsung steht an — du bist bei '+total+' km.';}
+  else alert.style.display='none';
+
+  const list=document.getElementById(id+'-list');
+  const empty=document.getElementById(id+'-empty');
+  if(!s.rides.length){list.innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    list.innerHTML=s.rides.map(r=>`
+      <div class="ride-item">
+        <span class="ride-date">${fmtDate(r.date)}</span>
+        <span class="ride-note">${r.note||''}</span>
+        <span class="ride-km ${id}">+${Math.round(r.km)} km</span>
+        <button class="ride-delete" onclick="removeRide('${id}',${r.rid})" title="Löschen">×</button>
+      </div>`).join('');
+  }
+
+  const waxSec=document.getElementById(id+'-wax-section');
+  if(s.waxHistory.length){
+    waxSec.style.display='block';
+    document.getElementById(id+'-wax-list').innerHTML=s.waxHistory.map(w=>`
+      <div class="wax-item">
+        <span class="wax-date">${fmtDate(w.date)}</span>
+        <span>Kette gewachst nach</span>
+        <span class="wax-km">${w.km} km</span>
+      </div>`).join('');
+  } else waxSec.style.display='none';
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  if(['rr-km','rr-date','rr-note'].includes(e.target.id)) addRide('rr');
+  if(['mtb-km','mtb-date','mtb-note'].includes(e.target.id)) addRide('mtb');
+});
+
+const today=new Date().toISOString().split('T')[0];
+document.getElementById('rr-date').value=today;
+document.getElementById('mtb-date').value=today;
+load();
+</script>
+</body>
+</html>
